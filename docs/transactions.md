@@ -47,7 +47,7 @@ val enrollAvi = (putAvi zip putClasses).transaction
 
 DynamoDBQueries using the `.transaction` method will fail at runtime if there are invalid transaction actions such as creating a table, scanning for items, or querying. The [DynamoDB documentation] has a limited number of actions that can be performed for either a read or a write transaction. There is a `.safeTransaction` method that is also available that will return `Either[Throwable, DynamoDBQuery[A]]`.
 
-There are more examples in our [integration tests](../dynamodb/src/it/scala/zio/dynamodb/LiveSpec.scala).
+There are more examples in our integration tests (`../dynamodb/src/it/scala/zio/dynamodb/LiveSpec.scala`).
 
 ### Valid Transact Write Items
 

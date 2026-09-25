@@ -5,7 +5,7 @@ import scala.annotation.tailrec
 object EitherUtil {
   def forEach[A, B](list: Iterable[A])(f: A => Either[String, B]): Either[String, Iterable[B]] = {
     @tailrec
-    def loop[A2, B2](xs: Iterable[A2], acc: List[B2])(f: A2 => Either[String, B2]): Either[String, Iterable[B2]] =
+    def loop[A2, B2](xs: List[A2], acc: List[B2])(f: A2 => Either[String, B2]): Either[String, Iterable[B2]] =
       xs match {
         case head :: tail =>
           f(head) match {

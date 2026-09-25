@@ -139,7 +139,7 @@ object KeyConditionExpression {
                 .Equals(PartitionKey(partitionKey), avL)
                 .&&(SortKeyExpression.BeginsWith(SortKey(sortKey), av))
             )
-          case c => Left(s"condition '$c' is not a valid sort condition expression")
+          case other => Left(s"condition '$other' is not a valid sort condition expression")
         }
 
       case c => Left(s"condition $c is not a valid key condition expression")

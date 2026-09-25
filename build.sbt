@@ -1,4 +1,5 @@
 import BuildHelper._
+import zio.sbt.githubactions.Step
 
 inThisBuild(
   List(
@@ -24,12 +25,30 @@ inThisBuild(
     pgpSecretRing := file("/tmp/secret.asc"),
     scmInfo := Some(
       ScmInfo(url("https://github.com/googley42/zio-dynamodb"), "scm:git:git@github.com:googley42/zio-dynamodb.git")
-    )
+    ),
+    // sbt 1.13's SIP-51 check rejects the pinned Scala 2.13.8 compiler because the `docs` module
+    // pulls in a transitive scala-library 2.13.18. Bumping Scala213 all the way to 2.13.18 instead
+    // pulls in a flood of new `-Xlint` warnings-as-errors from the patch versions in between.
+    allowUnsafeScalaLibUpgrade := true,
+    ciEnabledBranches := Seq("master"),
+    // scalac 2.13.3/2.12.12 can't parse JDK 17+ classfiles reliably, so keep every job (not just
+    // the test matrix) on a JVM the old compilers actually support.
+    ciDefaultJavaVersion := "11",
+    ciTargetJavaVersions := Seq("8", "11"),
+    ciTestJobs := ciTestJobs.value.map { job =>
+      job.copy(steps =
+        job.steps :+ Step.SingleStep(
+          name = "Run integration tests",
+          run = Some("sbt +it:test")
+        )
+      )
+    }
   )
 )
 
 addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
 addCommandAlias("check", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck")
+addCommandAlias("lint", "scalafmtCheckAll")
 
 // from this blog http://softwarebyjosh.com/2018/03/25/how-to-unit-test-your-dynamodb-queries.html
 lazy val copyJars = taskKey[Unit]("copyJars")
@@ -62,6 +81,7 @@ lazy val root =
     .in(file("."))
     .settings(skip in publish := true)
     .aggregate(zioDynamodb, examples, docs)
+    .enablePlugins(ZioSbtCiPlugin)
 
 lazy val zioDynamodb = module("zio-dynamodb", "dynamodb")
   .enablePlugins(BuildInfoPlugin)
@@ -316,6 +336,9 @@ lazy val docs = project
   .settings(
     skip.in(publish) := true,
     moduleName := "zio-dynamodb-docs",
+    projectName := "ZIO DynamoDB",
+    mainModuleName := (zioDynamodb / moduleName).value,
+    projectStage := ProjectStage.ProductionReady,
     scalacOptions -= "-Yno-imports",
     scalacOptions -= "-Xfatal-warnings",
     libraryDependencies ++= Seq(

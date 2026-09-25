@@ -4,9 +4,12 @@ import sbtbuildinfo._
 import BuildInfoKeys._
 
 object BuildHelper {
-  private val Scala212        = "2.12.12"
-  private val Scala213        = "2.13.3"
-  private val SilencerVersion = "1.7.1"
+  private val Scala212 = "2.12.12"
+  // sbt 1.13's zinc has no precompiled compiler-bridge for 2.13.3, and building one from source
+  // fails: the modern compiler-interface jar uses a classfile format that 2.13.3's parser can't
+  // read. 2.13.8 is the smallest bump that gets a working bridge without pulling in the flood of
+  // new lints that later 2.13 patches (e.g. 2.13.18) add under `-Xlint:_`.
+  private val Scala213 = "2.13.8"
 
   private val stdOptions = Seq(
     "-encoding",
@@ -31,7 +34,10 @@ object BuildHelper {
     "-Wunused:patvars",
     "-Wunused:privates",
     "-Wunused:params",
-    "-Wvalue-discard"
+    "-Wvalue-discard",
+    // 2.13.8's lints flag `enum` as a field name (a Scala-3 soft keyword). Some specs use it
+    // deliberately to test that exact field name, so silence the warning instead of renaming it.
+    "-Wconf:msg=will become a keyword in Scala 3:s"
   )
 
   private val stdOptsUpto212 = Seq(
@@ -75,13 +81,6 @@ object BuildHelper {
       crossScalaVersions := Seq(Scala212, Scala213),
       scalaVersion in ThisBuild := Scala213,
       scalacOptions := stdOptions ++ extraOptions(scalaVersion.value),
-      libraryDependencies ++=
-        Seq(
-          ("com.github.ghik"                % "silencer-lib"    % SilencerVersion % Provided)
-            .cross(CrossVersion.full),
-          compilerPlugin(("com.github.ghik" % "silencer-plugin" % SilencerVersion).cross(CrossVersion.full)),
-          compilerPlugin("org.typelevel" %% "kind-projector" % "0.10.3")
-        ),
       incOptions ~= (_.withLogRecompileOnMacro(false))
     )
 }
